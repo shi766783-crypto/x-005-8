@@ -5,6 +5,9 @@
 export type ToolCategory = '手动工具' | '电动工具' | '测量工具' | '安全防护' | '其他'
 export type ToolStatus = '完好' | '需维修' | '已借出'
 
+/** 保养状态：未安排 / 正常 / 即将到期 / 今日到期 / 已逾期 */
+export type MaintenanceStatus = 'unscheduled' | 'ok' | 'upcoming' | 'due' | 'overdue'
+
 export interface Tool {
   id: string
   name: string
@@ -13,6 +16,8 @@ export interface Tool {
   location: string
   status: ToolStatus
   photo?: string // base64，可选
+  maintenanceCycleDays?: number // 定期保养周期（天），为空或 0 表示不安排保养
+  lastMaintenanceAt?: number // 上次保养完成时间戳；从未保养过时以入库时间为起算点
   createdAt: number
   updatedAt: number
 }
@@ -138,6 +143,22 @@ export interface AchievementDef {
 // ---------- 常量 ----------
 export const TOOL_CATEGORIES: ToolCategory[] = ['手动工具', '电动工具', '测量工具', '安全防护', '其他']
 export const TOOL_STATUSES: ToolStatus[] = ['完好', '需维修', '已借出']
+
+/** 到期前多少天开始在工具列表中提示「即将到期」 */
+export const MAINTENANCE_SOON_DAYS = 7
+
+/** 可选的保养周期（天） */
+export const MAINTENANCE_CYCLE_OPTIONS: number[] = [7, 15, 30, 60, 90, 180, 365]
+
+export const MAINTENANCE_STATUS_META: Record<
+  Exclude<MaintenanceStatus, 'unscheduled'>,
+  { label: string; tag: 'success' | 'primary' | 'warning' | 'danger' }
+> = {
+  ok: { label: '正常', tag: 'success' },
+  upcoming: { label: '即将到期', tag: 'primary' },
+  due: { label: '今日到期', tag: 'warning' },
+  overdue: { label: '已逾期', tag: 'danger' },
+}
 
 export const MATERIAL_CATEGORIES: MaterialCategory[] = ['木材', '五金', '电子元件', '涂料', '胶粘剂', '其他']
 

@@ -20,6 +20,7 @@ export function useDashboard() {
     inProgress: projectStore.inProgressProjects.value.length,
     completedThisMonth: projectStore.completedThisMonth.value,
     lowStock: materialStore.lowStockMaterials.value.length,
+    maintenanceDue: toolStore.dueMaintenanceTools.value.length,
   }))
 
   /** 首页未归还工具提醒 */
@@ -28,5 +29,8 @@ export function useDashboard() {
   /** 首页库存预警提醒 */
   const lowStockMaterials = computed(() => materialStore.lowStockMaterials.value)
 
-  return { stats, unreturnedBorrows, lowStockMaterials }
+  /** 首页保养提醒：到期（含今日）与已逾期的工具 */
+  const dueMaintenance = computed(() => toolStore.dueMaintenanceTools.value)
+
+  return { stats, unreturnedBorrows, lowStockMaterials, dueMaintenance }
 }

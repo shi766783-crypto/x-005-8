@@ -34,3 +34,24 @@ export function today(): string {
 export function isOverdue(expectedReturnDate: string): boolean {
   return expectedReturnDate < today()
 }
+
+/** YYYY-MM-DD → 当日 00:00 的时间戳（本地时区） */
+export function parseDate(s: string): number {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1).getTime()
+}
+
+/** 在给定时间戳上加减整天数，返回新的时间戳 */
+export function addDays(ts: number, days: number): number {
+  return ts + days * 24 * 60 * 60 * 1000
+}
+
+/** 按整天计算 b - a（忽略时分秒），b 为今天时表示距 a 还有/已过多少天 */
+export function diffDays(a: number, b: number): number {
+  const dayMs = 24 * 60 * 60 * 1000
+  const da = new Date(a)
+  const db = new Date(b)
+  const startA = new Date(da.getFullYear(), da.getMonth(), da.getDate()).getTime()
+  const startB = new Date(db.getFullYear(), db.getMonth(), db.getDate()).getTime()
+  return Math.round((startB - startA) / dayMs)
+}
