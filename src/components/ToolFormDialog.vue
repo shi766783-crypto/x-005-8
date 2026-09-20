@@ -5,7 +5,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import type { Tool, ToolCategory, ToolStatus } from '../types'
 import { TOOL_CATEGORIES, TOOL_STATUSES } from '../types'
 import { useToolStore } from '../stores/useToolStore'
-import { toNumber } from '../utils/format'
+import { toNumber, today } from '../utils/format'
 import ImageUpload from './ImageUpload.vue'
 
 const props = defineProps<{ modelValue: boolean; tool: Tool | null }>()
@@ -20,21 +20,44 @@ const emptyForm = {
   quantity: 1,
   location: '',
   status: '完好' as ToolStatus,
+  maintenanceIntervalDays: undefined as number | undefined,
+  lastMaintainedDate: '',
   photo: '',
 }
 
 const form = reactive({ ...emptyForm })
 
+const disabledFutureDate = (date: Date) => date.getTime() > new Date(`${today()} 23:59:59`).getTime()
+
 const rules: FormRules = {
   name: [{ required: true, message: '请输入工具名称', trigger: 'blur' }],
   quantity: [{ required: true, message: '请输入数量', trigger: 'blur' }],
+  lastMaintainedDate: [
+    {
+      validator: (_rule, value: string, callback) => {
+        if (value && !form.maintenanceIntervalDays) callback(new Error('请先设置保养周期'))
+        else callback()
+      },
+      trigger: 'change',
+    },
+  ],
 }
 
 watch(
   () => props.modelValue,
   (visible) => {
     if (visible) {
-      Object.assign(form, props.tool ? { ...props.tool, photo: props.tool.photo ?? '' } : emptyForm)
+      Object.assign(form, {
+        ...emptyForm,
+        ...(props.tool
+          ? {
+              ...props.tool,
+              maintenanceIntervalDays: props.tool.maintenanceIntervalDays ?? undefined,
+              lastMaintainedDate: props.tool.lastMaintainedDate ?? '',
+              photo: props.tool.photo ?? '',
+            }
+          : {}),
+      })
     }
   },
 )
@@ -46,7 +69,16 @@ async function submit() {
   } catch {
     return
   }
-  const payload = { ...form, quantity: toNumber(form.quantity) }
+  const maintenanceIntervalDays = form.maintenanceIntervalDays
+    ? toNumber(form.maintenanceIntervalDays)
+    : undefined
+  const lastMaintainedDate = maintenanceIntervalDays ? form.lastMaintainedDate || undefined : undefined
+  const payload = {
+    ...form,
+    quantity: toNumber(form.quantity),
+    maintenanceIntervalDays,
+    lastMaintainedDate,
+  }
   if (props.tool) store.updateTool(props.tool.id, payload)
   else store.addTool(payload)
   ElMessage.success(props.tool ? '工具已更新' : '工具已添加')
@@ -82,6 +114,25 @@ async function submit() {
           <el-radio-button v-for="s in TOOL_STATUSES" :key="s" :value="s">{{ s }}</el-radio-button>
         </el-radio-group>
       </el-form-item>
+      <el-form-item label="保养周期">
+        <el-input-number
+          v-model="form.maintenanceIntervalDays"
+          :min="1"
+          :max="3650"
+          placeholder="不设置"
+        />
+        <span class="form-hint">天；留空表示不安排保养</span>
+      </el-form-item>
+      <el-form-item v-if="form.maintenanceIntervalDays" label="上次保养" prop="lastMaintainedDate">
+        <el-date-picker
+          v-model="form.lastMaintainedDate"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="选择上次保养日期"
+          :disabled-date="disabledFutureDate"
+          style="width: 100%"
+        />
+      </el-form-item>
       <el-form-item label="照片">
         <ImageUpload v-model="form.photo" />
       </el-form-item>
@@ -92,3 +143,11 @@ async function submit() {
     </template>
   </el-dialog>
 </template>
+
+<style scoped>
+.form-hint {
+  margin-left: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+</style>

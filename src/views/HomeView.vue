@@ -1,13 +1,15 @@
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useDashboard } from '../composables/useDashboard'
 import { useToolStore } from '../stores/useToolStore'
 import { useBorrowStore } from '../stores/useBorrowStore'
+import type { Tool, ToolMaintenanceInfo } from '../types'
 import StatCard from '../components/StatCard.vue'
-import { today, isOverdue } from '../utils/format'
+import { today, isOverdue, getMaintenanceInfo } from '../utils/format'
 
 const router = useRouter()
-const { stats, unreturnedBorrows, lowStockMaterials } = useDashboard()
+const { stats, unreturnedBorrows, lowStockMaterials, maintenanceDueTools } = useDashboard()
 const toolStore = useToolStore()
 const borrowStore = useBorrowStore()
 
@@ -17,6 +19,25 @@ function toolName(id: string): string {
 
 function goReturn(recordId: string) {
   borrowStore.returnTool(recordId, today())
+}
+
+function maintenanceInfo(tool: Tool): ToolMaintenanceInfo | null {
+  return getMaintenanceInfo(tool)
+}
+
+const maintenanceTagType: Record<string, 'warning' | 'danger' | 'primary'> = {
+  待保养: 'warning',
+  今日到期: 'primary',
+  已逾期: 'danger',
+}
+
+function completeMaintenance(tool: Tool) {
+  toolStore.completeMaintenance(tool.id)
+  ElMessage.success(`「${tool.name}」已完成保养，下次保养时间已更新`)
+}
+
+function maintenanceRowClass({ row }: { row: Tool }): string {
+  return getMaintenanceInfo(row)?.dueStatus === '已逾期' ? 'maintenance-overdue-row' : ''
 }
 </script>
 
@@ -32,7 +53,53 @@ function goReturn(recordId: string) {
       <StatCard label="进行中项目" :value="stats.inProgress" color="#e6a23c" icon="Loading" />
       <StatCard label="本月完成项目" :value="stats.completedThisMonth" color="#9c27b0" icon="Medal" />
       <StatCard label="库存预警" :value="stats.lowStock" color="#f56c6c" icon="Warning" />
+      <StatCard label="待保养工具" :value="stats.maintenanceDue" color="#ff8c00" icon="Timer" />
     </div>
+
+    <section class="card maintenance-card">
+      <div class="section-head">
+        <span class="section-title">工具保养提醒</span>
+        <el-tag v-if="maintenanceDueTools.length" :type="stats.maintenanceOverdue ? 'danger' : 'warning'">
+          {{ maintenanceDueTools.length }} 件待保养<span v-if="stats.maintenanceOverdue">，{{ stats.maintenanceOverdue }} 件已逾期</span>
+        </el-tag>
+        <el-tag v-else type="success">保养正常</el-tag>
+      </div>
+      <el-table
+        v-if="maintenanceDueTools.length"
+        :data="maintenanceDueTools"
+        size="small"
+        :row-class-name="maintenanceRowClass"
+      >
+        <el-table-column prop="name" label="工具" min-width="120" />
+        <el-table-column label="周期" width="90" align="center">
+          <template #default="{ row }">{{ row.maintenanceIntervalDays }} 天</template>
+        </el-table-column>
+        <el-table-column label="上次保养" width="110" align="center">
+          <template #default="{ row }">{{ row.lastMaintainedDate || '未记录' }}</template>
+        </el-table-column>
+        <el-table-column label="计划保养" width="190">
+          <template #default="{ row }">
+            <div class="maintenance-due">
+              <el-tag :type="maintenanceTagType[maintenanceInfo(row)?.dueStatus ?? '待保养']" size="small">
+                {{ maintenanceInfo(row)?.dueStatus }}
+              </el-tag>
+              <span :class="{ 'gap-missing': maintenanceInfo(row)?.dueStatus === '已逾期' }">
+                {{ maintenanceInfo(row)?.dueDate }}
+                <template v-if="maintenanceInfo(row)?.dueStatus === '已逾期'">
+                  （逾期 {{ Math.abs(maintenanceInfo(row)?.daysUntilDue ?? 0) }} 天）
+                </template>
+              </span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" align="center">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" text @click="completeMaintenance(row)">完成保养</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-else description="暂无到期保养" :image-size="60" />
+    </section>
 
     <div class="two-col">
       <section class="card">
@@ -109,6 +176,21 @@ function goReturn(recordId: string) {
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 14px;
   margin-bottom: 16px;
+}
+.maintenance-card {
+  margin-bottom: 16px;
+}
+.maintenance-due {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+:deep(.maintenance-overdue-row) {
+  background: #fef0f0 !important;
+}
+:deep(.maintenance-overdue-row:hover > td) {
+  background: #fde2e2 !important;
 }
 .two-col {
   display: grid;

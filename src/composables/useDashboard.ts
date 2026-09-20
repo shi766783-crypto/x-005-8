@@ -20,6 +20,8 @@ export function useDashboard() {
     inProgress: projectStore.inProgressProjects.value.length,
     completedThisMonth: projectStore.completedThisMonth.value,
     lowStock: materialStore.lowStockMaterials.value.length,
+    maintenanceDue: toolStore.maintenanceDueTools.value.length,
+    maintenanceOverdue: toolStore.maintenanceOverdueTools.value.length,
   }))
 
   /** 首页未归还工具提醒 */
@@ -28,5 +30,8 @@ export function useDashboard() {
   /** 首页库存预警提醒 */
   const lowStockMaterials = computed(() => materialStore.lowStockMaterials.value)
 
-  return { stats, unreturnedBorrows, lowStockMaterials }
+  /** 首页工具保养提醒 */
+  const maintenanceDueTools = computed(() => toolStore.maintenanceDueTools.value)
+
+  return { stats, unreturnedBorrows, lowStockMaterials, maintenanceDueTools }
 }

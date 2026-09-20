@@ -39,6 +39,7 @@ const materialByCategory = computed(() =>
       <StatCard label="进行中项目" :value="stats.inProgress" color="#e6a23c" icon="Loading" />
       <StatCard label="本月完成项目" :value="stats.completedThisMonth" color="#9c27b0" icon="Medal" />
       <StatCard label="库存预警" :value="stats.lowStock" color="#f56c6c" icon="Warning" />
+      <StatCard label="待保养工具" :value="stats.maintenanceDue" color="#ff8c00" icon="Timer" />
     </div>
 
     <div class="two-col">

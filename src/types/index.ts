@@ -4,6 +4,7 @@
 // ---------- 工具 ----------
 export type ToolCategory = '手动工具' | '电动工具' | '测量工具' | '安全防护' | '其他'
 export type ToolStatus = '完好' | '需维修' | '已借出'
+export type MaintenanceDueStatus = '待保养' | '今日到期' | '即将到期' | '正常' | '已逾期'
 
 export interface Tool {
   id: string
@@ -12,9 +13,17 @@ export interface Tool {
   quantity: number // 拥有数量
   location: string
   status: ToolStatus
+  maintenanceIntervalDays?: number // 保养周期（天）
+  lastMaintainedDate?: string // 上次保养日期 YYYY-MM-DD
   photo?: string // base64，可选
   createdAt: number
   updatedAt: number
+}
+
+export interface ToolMaintenanceInfo {
+  dueDate?: string // 计划保养日期
+  daysUntilDue: number // 距计划保养日期天数（负数表示已逾期天数）
+  dueStatus: MaintenanceDueStatus
 }
 
 // ---------- 材料 ----------
